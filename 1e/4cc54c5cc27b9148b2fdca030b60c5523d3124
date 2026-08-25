@@ -1,0 +1,65 @@
+lib/__tests__/jmap-recipient-mailboxes.test.ts
+  s_5c53f5d526fdf4::t_220c267db2d9d2 25,42
+  s_5c53f5d526fdf4::t_38c7071364530b 46
+  s_5c53f5d526fdf4::t_d82545e31c0f8b 53
+  s_5c53f5d526fdf4::t_001290e22d2e8c 44
+  s_5c53f5d526fdf4::t_4456ddfcc16e52 45,47-48,50-52
+  s_5c53f5d526fdf4::t_a2c2b7a6c95045 43,49
+components/layout/sidebar.tsx
+  s_5c53f5d526fdf4::t_4d5a33d8bc5c75 73,131-133,288,314,329
+  s_5c53f5d526fdf4::t_e0757fdee86fe9 484-497,509,560,591-592,594-604,606-613,615-627
+  s_5c53f5d526fdf4::t_9a687b5a6578d3 937,959-963,965
+  s_5c53f5d526fdf4::t_992c9c676f99b4 1354-1370,1398-1409
+  s_5c53f5d526fdf4::t_aad588bf743de8 566
+  s_5c53f5d526fdf4::t_4eded20007bd9e 605
+  s_5c53f5d526fdf4::t_fc065358d1e188 1448-1460
+lib/__tests__/jmap-request-limits.test.ts
+  s_5c53f5d526fdf4::t_f136af353ab22e 236,240-243
+lib/jmap/client.ts
+  s_5c53f5d526fdf4::t_2e5017bc23b2cf 1199-1200
+  s_5c53f5d526fdf4::t_6f55a1e0571859 1198,1201,1203,1205-1206,1208,1210-1213,1217-1223,1253,1259-1260,1262-1263
+  s_5c53f5d526fdf4::t_b913117e6bd0c7 1236-1238
+  s_5c53f5d526fdf4::t_719a71b73a236b 1242
+  s_5c53f5d526fdf4::t_3c6735a711ee16 1241
+  s_5c53f5d526fdf4::t_be8c7369f274e4 1224-1225
+  s_5c53f5d526fdf4::t_8a141411dd69f0 1202,1214,1261,1267,1322
+  s_5c53f5d526fdf4::t_e8365bd3b63e28 1226,1228-1233,1235,1239-1240,1251-1252
+  s_5c53f5d526fdf4::t_5d4a1393b729bf 1254
+  s_5c53f5d526fdf4::t_649c7dbc8a3116 1227,1234,1243,1246
+  s_5c53f5d526fdf4::t_4291193942ef8f 1204,1207,1209,1215-1216,1244-1245,1247-1250,1255-1258
+lib/__tests__/jmap-draft-lifecycle.test.ts
+  s_5c53f5d526fdf4::t_a2c2b7a6c95045 41,43-44,53
+  s_5c53f5d526fdf4::t_cfde4a157281b2 27,40,42,46-48
+  s_5c53f5d526fdf4::t_38c7071364530b 45
+  s_5c53f5d526fdf4::t_a9d81ab4b8dbe6 50
+integration/tests/helpers/jmap.ts
+  s_5c53f5d526fdf4::t_8f7729b3c3e937 192-205
+integration/tests/14-mailbox-pagination.spec.ts
+  s_5c53f5d526fdf4::t_66f9c6e5f95668 1-13,15-40,42-79
+  s_5c53f5d526fdf4::t_de8fd4475e9334 14,41
+lib/__tests__/jmap-first-touch-ordering.test.ts
+  s_5c53f5d526fdf4::t_f136af353ab22e 11,87-89,117
+integration/stalwart/plan-accounts.ndjson.tpl
+  s_5c53f5d526fdf4::t_240513a40689b2 1
+lib/__tests__/jmap-mailbox-pagination.test.ts
+  s_5c53f5d526fdf4::t_31a101b4d49d5b 6,8-11,25,70
+  s_5c53f5d526fdf4::t_5d4a1393b729bf 33,57-59
+  s_5c53f5d526fdf4::t_6a5ef98932bc73 5,27-29
+  s_5c53f5d526fdf4::t_986be9aa2b3d5e 1-4,7,12-24,26,30-32,34-56,60-69,71-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "1e4cc54c5cc27b9148b2fdca030b60c5523d3124",
+  "prompts": {},
+  "sessions": {
+    "s_5c53f5d526fdf4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a035ac-7ab9-70a3-af4a-d6c14fd58ae7",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}
