@@ -44,6 +44,7 @@ components/layout/sidebar.tsx
   s_5c53f5d526fdf4::t_4d5a33d8bc5c75 73,131-133,288,314,329
   s_5c53f5d526fdf4::t_9a687b5a6578d3 937,959-963,965
   s_5c53f5d526fdf4::t_992c9c676f99b4 1354-1370,1398-1409,1446,1464
+  s_5c53f5d526fdf4::t_fc065358d1e188 1448-1460
 lib/__tests__/jmap-recipient-mailboxes.test.ts
   s_5c53f5d526fdf4::t_001290e22d2e8c 44
   s_5c53f5d526fdf4::t_220c267db2d9d2 25,42
