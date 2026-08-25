@@ -1,0 +1,28 @@
+lib/__tests__/jmap-draft-lifecycle.test.ts
+  s_5c53f5d526fdf4::t_cfde4a157281b2 27,40-46
+lib/jmap/client.ts
+  s_5c53f5d526fdf4::t_6f55a1e0571859 1131-1149,1151-1160,1163-1174,1176-1180,1182-1187,1189-1191,1193-1194,1197-1233,1271-1293
+lib/__tests__/jmap-mailbox-pagination.test.ts
+  s_5c53f5d526fdf4::t_ac67e9ee0efd1e 1-195
+lib/__tests__/jmap-recipient-mailboxes.test.ts
+  s_5c53f5d526fdf4::t_c8a664e019a618 25,42
+  s_5c53f5d526fdf4::t_4456ddfcc16e52 44-51
+  s_5c53f5d526fdf4::t_001290e22d2e8c 43
+  s_5c53f5d526fdf4::t_d82545e31c0f8b 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "b442e9dec2c4bc482ede1917772815fad41bdbf7",
+  "prompts": {},
+  "sessions": {
+    "s_5c53f5d526fdf4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a035ac-7ab9-70a3-af4a-d6c14fd58ae7",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nick Sweeting <git@sweeting.me>"
+    }
+  }
+}
