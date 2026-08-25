@@ -1,0 +1,29 @@
+lib/sieve/__tests__/fixtures/mail-rules-watcher.sieve
+  s_5c53f5d526fdf4::t_de6760ebba85ff 1-17
+lib/sieve/__tests__/external-rules.test.ts
+  s_5c53f5d526fdf4::t_7dfc4444d14481 497
+  s_5c53f5d526fdf4::t_89309de1c9e95d 439-490
+  s_5c53f5d526fdf4::t_de6760ebba85ff 381-438,491-496,498-503
+lib/sieve/parser.ts
+  s_5c53f5d526fdf4::t_3f2b3778a29c76 729,736-740,742-745,748-749,753,766,787-792,806-807
+  s_5c53f5d526fdf4::t_611a2b0932daac 25-26,730-735,741,746-747,754-765,767-782,784,786,793-795,799-805,900-902,944-945,955
+  s_5c53f5d526fdf4::t_7dfc4444d14481 750-752
+  s_5c53f5d526fdf4::t_dac8ba7fb06692 950-952
+  s_5c53f5d526fdf4::t_f68f0dac2f7a89 27,783,785,796-798,808-827,904,922,946-949,953-954,957,959,973
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "96b15c172e9cae43fa86b8ee97dba7f0c8a4bd3f",
+  "prompts": {},
+  "sessions": {
+    "s_5c53f5d526fdf4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a035ac-7ab9-70a3-af4a-d6c14fd58ae7",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Nick Sweeting <git@sweeting.me>"
+    }
+  }
+}
