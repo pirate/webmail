@@ -378,4 +378,127 @@ describe('external rule preservation (issue #201)', () => {
       expect(headerCount).toBe(1);
     });
   });
+
+  describe('Mail Rules Watcher managed region', () => {
+    const watcherFixture = readFileSync(
+      join(__dirname, 'fixtures', 'mail-rules-watcher.sieve'),
+      'utf-8',
+    );
+    const beginMarker = '# BEGIN MAIL RULES WATCHER - MANAGED';
+    const endMarker = '# END MAIL RULES WATCHER - MANAGED';
+
+    it('collapses the paired managed region into one locked external rule', () => {
+      const result = parseScript(watcherFixture);
+      const watcherRules = result.rules.filter(r => r.originLabel === 'Mail Rules Watcher');
+
+      expect(result.isOpaque).toBe(false);
+      expect(watcherRules).toHaveLength(1);
+      expect(watcherRules[0]).toMatchObject({
+        name: 'Mail Rules Watcher',
+        origin: 'opaque',
+        conditions: [],
+        actions: [],
+      });
+      expect(watcherRules[0].rawBlock).toContain(beginMarker);
+      expect(watcherRules[0].rawBlock).toContain(endMarker);
+      expect(watcherRules[0].rawBlock).toContain('include :personal "migrated-rainloop";');
+      expect(result.rules).toHaveLength(1);
+      expect(result.externalRequires).toEqual(expect.arrayContaining([
+        'copy',
+        'envelope',
+        'fileinto',
+        'imap4flags',
+        'include',
+        'mailbox',
+        'variables',
+        'vnd.stalwart.expressions',
+      ]));
+    });
+
+    it('preserves both markers and the managed body across repeated saves', () => {
+      let script = watcherFixture;
+      for (let i = 0; i < 3; i++) {
+        const parsed = parseScript(script);
+        expect(parsed.isOpaque).toBe(false);
+        script = generateScript(parsed.rules, parsed.vacation, {
+          externalRequires: parsed.externalRequires,
+        });
+      }
+
+      expect((script.match(/# BEGIN MAIL RULES WATCHER - MANAGED/g) || [])).toHaveLength(1);
+      expect((script.match(/# END MAIL RULES WATCHER - MANAGED/g) || [])).toHaveLength(1);
+      expect(script).toContain('let "type_result" "llm_prompt');
+      expect(script).toContain('fileinto :copy :create "Type/Expenses";');
+      expect(script).toContain('include :personal "migrated-rainloop";');
+
+      const reparsed = parseScript(script);
+      expect(reparsed.rules.filter(r => r.originLabel === 'Mail Rules Watcher')).toHaveLength(1);
+      expect(reparsed.rules.filter(r => r.originLabel === 'External')).toHaveLength(0);
+    });
+
+    it('preserves the execution order around a managed region', () => {
+      const script = [
+        'require ["fileinto"];',
+        '# Rule: Before',
+        'if header :is "Subject" "before" { fileinto "Before"; }',
+        '# BEGIN EXTERNAL CLASSIFIER - MANAGED',
+        'let "result" "classify()";',
+        '# END EXTERNAL CLASSIFIER - MANAGED',
+        '# Rule: After',
+        'if header :is "Subject" "after" { fileinto "After"; }',
+        '',
+      ].join('\n');
+
+      const parsed = parseScript(script);
+      expect(parsed.isOpaque).toBe(false);
+      expect(parsed.rules.map(rule => rule.name)).toEqual([
+        'Before',
+        'External Classifier',
+        'After',
+      ]);
+
+      const regenerated = generateScript(parsed.rules, parsed.vacation, {
+        externalRequires: parsed.externalRequires,
+      });
+      expect(regenerated.indexOf('# Rule: Before')).toBeLessThan(
+        regenerated.indexOf('# BEGIN EXTERNAL CLASSIFIER - MANAGED'),
+      );
+      expect(regenerated.indexOf('# BEGIN EXTERNAL CLASSIFIER - MANAGED')).toBeLessThan(
+        regenerated.indexOf('# Rule: After'),
+      );
+    });
+
+    it('does not misclassify a vacation command inside a managed region', () => {
+      const script = [
+        'require ["vacation"];',
+        '# BEGIN AUTO RESPONDER - MANAGED',
+        'vacation "Owned response";',
+        '# END AUTO RESPONDER - MANAGED',
+        '',
+      ].join('\n');
+
+      const parsed = parseScript(script);
+      expect(parsed.isOpaque).toBe(false);
+      expect(parsed.vacation).toBeUndefined();
+      expect(parsed.rules).toHaveLength(1);
+      expect(parsed.rules[0]).toMatchObject({
+        name: 'Auto Responder',
+        origin: 'opaque',
+      });
+      expect(parsed.rules[0].rawBlock).toContain('vacation "Owned response";');
+    });
+
+    it.each([
+      ['missing end marker', watcherFixture.replace(endMarker, '')],
+      ['missing begin marker', watcherFixture.replace(beginMarker, '')],
+      ['duplicate begin marker', watcherFixture.replace(beginMarker, `${beginMarker}\n${beginMarker}`)],
+      ['duplicate end marker', watcherFixture.replace(endMarker, `${endMarker}\n${endMarker}`)],
+      ['reversed markers', `${endMarker}\n${beginMarker}\n`],
+      ['reserved placeholder collision', `${watcherFixture}\n__bulwark_managed_region_0;\n`],
+    ])('keeps the whole script raw-only for a malformed region: %s', (_name, script) => {
+      const result = parseScript(script);
+      expect(result.isOpaque).toBe(true);
+      expect(result.rules).toHaveLength(0);
+    });
+  });
 });

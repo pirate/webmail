@@ -22,6 +22,9 @@ const METADATA_BEGIN = '/* @metadata:begin';
 const METADATA_END = '@metadata:end */';
 
 const NEXTCLOUD_BLOCK_MARKER = "### Nextcloud Mail: Filters ### DON'T EDIT ###";
+const MANAGED_REGION_MARKER_RE =
+  /^[ \t]*#[ \t]*(BEGIN|END)[ \t]+([a-zA-Z0-9][a-zA-Z0-9 ._/-]*?)[ \t]+-[ \t]+MANAGED[ \t]*(?:\r?\n|$)/gm;
+const MANAGED_REGION_PLACEHOLDER_RE = /__bulwark_managed_region_(\d+)\s*;/;
 
 const BULWARK_EXTERNAL_HEADER_RE =
   /^[ \t]*#[ \t]*---[ \t]*External rules \(managed outside Bulwark\)[ \t]*---[ \t]*\r?\n/m;
@@ -723,6 +726,105 @@ function extractNextcloudRegions(content: string): {
   return { cleaned, rules, requires };
 }
 
+/**
+ * Preserve regions delimited by `# BEGIN <owner> - MANAGED` and a matching
+ * END marker as locked external rules. Their bodies may use commands and
+ * extensions that the visual builder cannot represent. Parsing those
+ * statements individually can attach a closing marker to no rule at all, so
+ * the next save drops it and leaves the owning tool unable to update its own
+ * script.
+ *
+ * A malformed marker set is not safe to edit: the owner of the region cannot
+ * reliably find its boundary either. Fall back to the whole-script raw editor
+ * instead of guessing which content belongs to the watcher.
+ */
+function extractManagedRegions(content: string): {
+  cleaned: string;
+  rules: FilterRule[];
+  malformed: boolean;
+} {
+  const markers = [...content.matchAll(MANAGED_REGION_MARKER_RE)];
+  if (markers.length === 0) {
+    return { cleaned: content, rules: [], malformed: false };
+  }
+  if (MANAGED_REGION_PLACEHOLDER_RE.test(content)) {
+    return { cleaned: content, rules: [], malformed: true };
+  }
+
+  const rules: FilterRule[] = [];
+  let cleaned = '';
+  let cursor = 0;
+  let open: RegExpMatchArray | null = null;
+
+  for (const marker of markers) {
+    const kind = marker[1];
+    if (kind === 'BEGIN') {
+      if (open) return { cleaned: content, rules: [], malformed: true };
+      open = marker;
+      continue;
+    }
+
+    if (!open || open[2].trim() !== marker[2].trim()) {
+      return { cleaned: content, rules: [], malformed: true };
+    }
+    const start = open.index;
+    const endStart = marker.index;
+    if (start === undefined || endStart === undefined || endStart <= start) {
+      return { cleaned: content, rules: [], malformed: true };
+    }
+
+    const end = endStart + marker[0].length;
+    const owner = open[2].trim().replace(/\s+/g, ' ');
+    const label = owner === owner.toUpperCase()
+      ? owner.toLowerCase().replace(/\b[a-z]/g, letter => letter.toUpperCase())
+      : owner;
+
+    cleaned += content.slice(cursor, start);
+    const regionIndex = rules.length;
+    rules.push({
+      id: `managed-${regionIndex}`,
+      name: label,
+      enabled: true,
+      matchType: 'all',
+      conditions: [],
+      actions: [],
+      stopProcessing: false,
+      origin: 'opaque',
+      originLabel: label,
+      rawBlock: content.slice(start, end),
+    });
+    // Keep a top-level statement in the cleaned script so the normal scanner
+    // retains this region's position relative to other external rules.
+    cleaned += `__bulwark_managed_region_${regionIndex};`;
+    cursor = end;
+    open = null;
+  }
+
+  if (open) return { cleaned: content, rules: [], malformed: true };
+  cleaned += content.slice(cursor);
+  return { cleaned, rules, malformed: false };
+}
+
+function restoreManagedRegions(
+  rules: FilterRule[],
+  managedRules: FilterRule[],
+): FilterRule[] {
+  return rules.map(rule => {
+    const rawBlock = rule.rawBlock || '';
+    const marker = MANAGED_REGION_PLACEHOLDER_RE.exec(rawBlock);
+    if (!marker) return rule;
+
+    const managed = managedRules[Number(marker[1])];
+    if (!managed?.rawBlock) return rule;
+    return {
+      ...managed,
+      // Preserve whitespace/comments attached by scanTopLevel while replacing
+      // only the synthetic statement with the exact owned region.
+      rawBlock: rawBlock.replace(MANAGED_REGION_PLACEHOLDER_RE, managed.rawBlock),
+    };
+  });
+}
+
 function stripBulwarkExternalHeader(content: string): string {
   return content.replace(BULWARK_EXTERNAL_HEADER_RE, '');
 }
@@ -795,8 +897,11 @@ export function parseScript(content: string): ParseResult {
     const afterMetadata = stripBulwarkExternalHeader(
       content.slice(endIdx + METADATA_END.length),
     );
-    const nextcloud = extractNextcloudRegions(afterMetadata);
+    const managed = extractManagedRegions(afterMetadata);
+    if (managed.malformed) return OPAQUE;
+    const nextcloud = extractNextcloudRegions(managed.cleaned);
     const external = parseExternalRules(nextcloud.cleaned, 'ext');
+    const restoredExternalRules = restoreManagedRegions(external.rules, managed.rules);
 
     // Parsed bulwark rules intentionally omit an explicit `origin` field so
     // round-trip equality with metadata-only callers holds. Absence of origin
@@ -814,7 +919,7 @@ export function parseScript(content: string): ParseResult {
     // fell back to opaque - a Bulwark-emitted block may fail to round-trip cleanly
     // (e.g. a value with literal braces) but the `# Rule: <name>` marker still
     // identifies it as ours.
-    const filteredExternal = external.rules.filter(r => {
+    const filteredExternal = restoredExternalRules.filter(r => {
       const raw = r.rawBlock || '';
       const match = raw.match(/#\s*Rule:\s*(.+?)\s*$/m);
       if (match) {
@@ -833,17 +938,25 @@ export function parseScript(content: string): ParseResult {
     };
   }
 
-  // No metadata - check vacation-only first
-  const vacationOnly = detectVacationOnlyScript(content);
-  if (vacationOnly) return vacationOnly;
-
   // Extract Nextcloud-managed marker regions first so their interior is not
   // parsed as a series of loose if-blocks (which would lose the outer markers
   // and mis-label later blocks as generic "External").
-  const nextcloud = extractNextcloudRegions(content);
-  const external = parseExternalRules(nextcloud.cleaned, 'ext');
+  const managed = extractManagedRegions(content);
+  if (managed.malformed) return OPAQUE;
 
-  const allRules = [...nextcloud.rules, ...external.rules];
+  // Check vacation-only after owned regions have been removed. Otherwise a
+  // managed region containing a vacation statement can bypass marker safety
+  // and be regenerated without its ownership boundary.
+  if (managed.rules.length === 0) {
+    const vacationOnly = detectVacationOnlyScript(managed.cleaned);
+    if (vacationOnly) return vacationOnly;
+  }
+
+  const nextcloud = extractNextcloudRegions(managed.cleaned);
+  const external = parseExternalRules(nextcloud.cleaned, 'ext');
+  const restoredExternalRules = restoreManagedRegions(external.rules, managed.rules);
+
+  const allRules = [...nextcloud.rules, ...restoredExternalRules];
   const allRequires = [
     ...external.externalRequires,
     ...nextcloud.requires.filter(r => !external.externalRequires.includes(r)),
@@ -857,7 +970,7 @@ export function parseScript(content: string): ParseResult {
   }
 
   // If at least one block parsed into a structured rule, expose them as external.
-  const anyParsed = external.rules.some(r => r.origin === 'external');
+  const anyParsed = restoredExternalRules.some(r => r.origin === 'external');
   if (anyParsed || allRules.length > 0) {
     return { rules: allRules, isOpaque: false, externalRequires: allRequires };
   }
